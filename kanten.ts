@@ -39,12 +39,14 @@ class AIController implements Controller {
 };
 
 class Thingy {
-	constructor(protected imageString: string) {
-		this.sprite = game.add.sprite(0, 0, this.imageString);
-		
+	constructor(protected imageString: string, protected mass: number) {
+		this.sprite = game.thingsGroup.create(0, 0, this.imageString);
+		this.sprite['thing'] = this;
+		this.massChanged();
 		game.physics.arcade.enable(this.sprite);
 		this.sprite.body.collideWorldBounds = true;	
 		this.sprite.body.bounce.setTo(0.2, 0.2);
+		//this.sprite.body.setSize(100, 100);
 	}
 
 	setPosition(x: number, y: number): void {
@@ -71,6 +73,24 @@ class Thingy {
 	setController(controller: Controller): void {
 		this.controller = controller;
 	}
+	
+	massChanged(): void {
+		const massScaleFactor: number = 0.15;
+		let size = Math.sqrt(this.mass / Math.PI);
+		this.setScale(size * massScaleFactor);
+	}
+	
+	onCollide(otherThing: Thingy): void {
+		let massDelta: number = this.mass - otherThing.mass;
+		const massEpsilon = 0.1;
+		if (massDelta > massEpsilon) {
+			this.mass += otherThing.mass;
+			this.massChanged();
+		} else if (massDelta < -massEpsilon) {
+			this.mass = 0;
+			this.massChanged();
+		}
+	}
 
 	update(): void {
 		if (this.controller)
@@ -88,24 +108,34 @@ class RunState extends Phaser.State {
 	}
 
 	create(): void {
-		game.physics.startSystem(Phaser.Physics.ARCADE);
+		const maxNumThings: number = 100;
 		
-		while (this.things.length < 10) {
+		game.scale.scaleMode = Phaser.ScaleManager.RESIZE;
+		game.physics.startSystem(Phaser.Physics.ARCADE);
+		game.thingsGroup = game.add.group();
+		
+		while (this.things.length < maxNumThings) {
 			let isPlayer: boolean = (this.things.length == 0);		
 			
-			let thing: Thingy = new Thingy(isPlayer ? 'bluesphere' : 'redsphere');
+			let mass: number = isPlayer ? 1.0 : game.rnd.realInRange(0.75, 1.25);
+			
+			let thing: Thingy = new Thingy(/* isPlayer ? 'bluesphere' : */ 'redsphere', mass);
 			
 			let x: number = isPlayer ? (game.width / 2) : game.rnd.integerInRange(50, game.width - 100);
 			let y: number = isPlayer ? (game.height / 2) : game.rnd.integerInRange(50, game.height - 100);
 			thing.setPosition(x,y);
 			
-			let scale: number = isPlayer ? 0.1 : game.rnd.realInRange(0.025, 0.2);
-			thing.setScale(scale);
-			
-			thing.setController(isPlayer ? new CursorController(this.game.input.keyboard.createCursorKeys()) : new AIController(this.game.rnd));
+			thing.setController(/* isPlayer ? new CursorController(this.game.input.keyboard.createCursorKeys()) : */ new AIController(this.game.rnd));
 			
 			this.things.push(thing);
 		}
+	}
+	
+	collisionCallback(s1, s2): void {
+		let thing1: Thingy = s1.thing;
+		let thing2: Thingy = s2.thing;
+		thing1.onCollide(thing2);
+		thing2.onCollide(thing1);
 	}
 
 	update(): void {
@@ -113,6 +143,8 @@ class RunState extends Phaser.State {
 			for (let thing of this.things) {
 				thing.update();
 			}
+			
+			game.physics.arcade.collide(game.thingsGroup, game.thingsGroup, this.collisionCallback);
 		}
 	}
 
@@ -124,11 +156,13 @@ class RunState extends Phaser.State {
 
 class Game extends Phaser.Game {
     constructor() {
-		super(800, 600, Phaser.AUTO, 'game');
-		
+		super("95%", "95%", Phaser.AUTO, 'game');
+			
 		this.state.add('RunState', RunState, false);
 		this.state.start('RunState');
 	}
+	
+	thingsGroup: Phaser.Group;
 };
 
 window.onload = () => {
