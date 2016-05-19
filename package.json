@@ -5,8 +5,12 @@
   "main": "kanten.js",
   "scripts": {
 	"build": "tsc --sourceMap kanten.ts",
+	"edit": "kanten.ts",
+	"play": "start \"\" \"http://localhost:8080/\"",
 	"watch": "tsc -w --sourceMap kanten.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+	"server": "start http-server",
+	"develop": "npm run server && npm run play && npm run edit && npm run watch"
   },
   "author": "Benbuck Nason",
   "license": "ISC"

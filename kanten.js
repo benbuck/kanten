@@ -39,56 +39,94 @@ var AIController = (function () {
 }());
 ;
 var Thingy = (function () {
-    function Thingy(imageString, mass) {
+    function Thingy(id, imageString, mass) {
+        this.id = id;
         this.imageString = imageString;
-        this.mass = mass;
         this.sprite = game.thingsGroup.create(0, 0, this.imageString);
         this.sprite['thing'] = this;
-        this.massChanged();
         game.physics.arcade.enable(this.sprite);
+        this.targetMass = mass;
+        this.sprite.body.mass = mass;
         this.sprite.body.collideWorldBounds = true;
-        this.sprite.body.bounce.setTo(0.2, 0.2);
-        //this.sprite.body.setSize(100, 100);
+        this.sprite.body.bounce.setTo(0.5, 0.5);
+        this.massChanged();
     }
     Thingy.prototype.setPosition = function (x, y) {
+        if (!this.sprite)
+            return;
         this.sprite.x = x;
         this.sprite.y = y;
     };
     Thingy.prototype.setScale = function (scale) {
+        if (!this.sprite)
+            return;
         this.sprite.scale.x = this.sprite.scale.y = scale;
     };
     Thingy.prototype.setVelocity = function (v) {
+        if (!this.sprite)
+            return;
         this.sprite.body.velocity = v;
     };
     Thingy.prototype.changeVelocityX = function (x) {
+        if (!this.sprite)
+            return;
         this.sprite.body.velocity.x += x;
     };
     Thingy.prototype.changeVelocityY = function (y) {
+        if (!this.sprite)
+            return;
         this.sprite.body.velocity.y += y;
     };
     Thingy.prototype.setController = function (controller) {
         this.controller = controller;
     };
     Thingy.prototype.massChanged = function () {
-        var massScaleFactor = 0.15;
-        var size = Math.sqrt(this.mass / Math.PI);
-        this.setScale(size * massScaleFactor);
+        var scaleFactor = 0.15;
+        var size = Math.sqrt(this.sprite.body.mass / Math.PI);
+        this.setScale(size * scaleFactor);
     };
     Thingy.prototype.onCollide = function (otherThing) {
-        var massDelta = this.mass - otherThing.mass;
-        var massEpsilon = 0.1;
-        if (massDelta > massEpsilon) {
-            this.mass += otherThing.mass;
-            this.massChanged();
+        var deathThreshold = 1.2;
+        if (this.sprite.body.mass > otherThing.sprite.body.mass) {
+            var ratio = this.sprite.body.mass / otherThing.sprite.body.mass;
+            if (ratio > deathThreshold) {
+                this.targetMass += otherThing.sprite.body.mass;
+                otherThing.die();
+            }
         }
-        else if (massDelta < -massEpsilon) {
-            this.mass = 0;
-            this.massChanged();
+        else if (otherThing.sprite.body.mass > this.sprite.body.mass) {
+            var ratio = otherThing.sprite.body.mass / this.sprite.body.mass;
+            if (ratio > deathThreshold) {
+                otherThing.targetMass += this.sprite.body.mass;
+                this.die();
+            }
+        }
+    };
+    Thingy.prototype.die = function () {
+        this.sprite.body.mass = 0;
+        this.massChanged();
+        if (this.sprite) {
+            this.sprite.kill();
+            game.thingsGroup.remove(this.sprite);
+            this.sprite.body.enable = false;
+            this.sprite = null;
         }
     };
     Thingy.prototype.update = function () {
         if (this.controller)
             this.controller.update(this);
+        if (!this.sprite)
+            return;
+        var massDelta = this.targetMass - this.sprite.body.mass;
+        if (massDelta) {
+            this.sprite.body.mass += massDelta / 20;
+            this.massChanged();
+        }
+    };
+    Thingy.prototype.render = function () {
+        if (!this.sprite)
+            return;
+        //game.debug.body(this.sprite);
     };
     return Thingy;
 }());
@@ -108,14 +146,18 @@ var RunState = (function (_super) {
         game.scale.scaleMode = Phaser.ScaleManager.RESIZE;
         game.physics.startSystem(Phaser.Physics.ARCADE);
         game.thingsGroup = game.add.group();
+        var aiController = new AIController(this.game.rnd);
+        var cursorController = new CursorController(this.game.input.keyboard.createCursorKeys());
         while (this.things.length < maxNumThings) {
             var isPlayer = (this.things.length == 0);
-            var mass = isPlayer ? 1.0 : game.rnd.realInRange(0.75, 1.25);
-            var thing = new Thingy(/* isPlayer ? 'bluesphere' : */ 'redsphere', mass);
+            var imageString = isPlayer ? 'bluesphere' : 'redsphere';
+            var mass = isPlayer ? 3.0 : game.rnd.realInRange(0.75, 1.25);
             var x = isPlayer ? (game.width / 2) : game.rnd.integerInRange(50, game.width - 100);
             var y = isPlayer ? (game.height / 2) : game.rnd.integerInRange(50, game.height - 100);
+            var controller = isPlayer ? cursorController : aiController;
+            var thing = new Thingy(this.things.length, imageString, mass);
             thing.setPosition(x, y);
-            thing.setController(/* isPlayer ? new CursorController(this.game.input.keyboard.createCursorKeys()) : */ new AIController(this.game.rnd));
+            thing.setController(controller);
             this.things.push(thing);
         }
     };
@@ -123,7 +165,6 @@ var RunState = (function (_super) {
         var thing1 = s1.thing;
         var thing2 = s2.thing;
         thing1.onCollide(thing2);
-        thing2.onCollide(thing1);
     };
     RunState.prototype.update = function () {
         if (this.things.length > 0) {
@@ -135,6 +176,10 @@ var RunState = (function (_super) {
         }
     };
     RunState.prototype.render = function () {
+        for (var _i = 0, _a = this.things; _i < _a.length; _i++) {
+            var thing = _a[_i];
+            thing.render();
+        }
     };
     return RunState;
 }(Phaser.State));
