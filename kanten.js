@@ -134,21 +134,25 @@ var Thingy = (function () {
 var RunState = (function (_super) {
     __extends(RunState, _super);
     function RunState() {
-        _super.apply(this, arguments);
-        this.things = [];
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.things = [];
+        return _this;
     }
+    RunState.prototype.init = function () {
+        game.scale.scaleMode = Phaser.ScaleManager.RESIZE;
+        game.scale.pageAlignHorizontally = true;
+        game.scale.pageAlignVertically = true;
+        game.physics.startSystem(Phaser.Physics.ARCADE);
+        game.thingsGroup = game.add.group();
+    };
     RunState.prototype.preload = function () {
         this.load.image('bluesphere', 'art/bluesphere.png');
         this.load.image('redsphere', 'art/redsphere.png');
     };
     RunState.prototype.create = function () {
-        var maxNumThings = 100;
-        game.scale.scaleMode = Phaser.ScaleManager.RESIZE;
-        game.physics.startSystem(Phaser.Physics.ARCADE);
-        game.thingsGroup = game.add.group();
         var aiController = new AIController(this.game.rnd);
         var cursorController = new CursorController(this.game.input.keyboard.createCursorKeys());
-        while (this.things.length < maxNumThings) {
+        while (this.things.length < RunState.maxNumThings) {
             var isPlayer = (this.things.length == 0);
             var imageString = isPlayer ? 'bluesphere' : 'redsphere';
             var mass = isPlayer ? 3.0 : game.rnd.realInRange(0.75, 1.25);
@@ -183,13 +187,15 @@ var RunState = (function (_super) {
     };
     return RunState;
 }(Phaser.State));
+RunState.maxNumThings = 1000;
 ;
 var Game = (function (_super) {
     __extends(Game, _super);
     function Game() {
-        _super.call(this, "95%", "95%", Phaser.AUTO, 'game');
-        this.state.add('RunState', RunState, false);
-        this.state.start('RunState');
+        var _this = _super.call(this, "95%", "95%", Phaser.AUTO, 'game') || this;
+        _this.state.add('RunState', RunState, false);
+        _this.state.start('RunState');
+        return _this;
     }
     return Game;
 }(Phaser.Game));

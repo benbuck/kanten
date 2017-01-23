@@ -3,15 +3,23 @@
   "version": "1.0.0",
   "description": "Simple eating/growing game.",
   "main": "kanten.js",
+  "author": "Benbuck Nason",
+  "license": "ISC",
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/benbuck/kanten"
+  },
+  "dependencies": {
+    "http-server": "0.9.0",
+    "typescript": "2.1.5"
+  },
   "scripts": {
 	"build": "tsc --sourceMap kanten.ts",
-	"edit": "kanten.ts",
+	"edit": "start kanten.ts",
 	"play": "start \"\" \"http://localhost:8080/\"",
 	"watch": "tsc -w --sourceMap kanten.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
 	"server": "start http-server",
 	"develop": "npm run server && npm run play && npm run edit && npm run watch"
-  },
-  "author": "Benbuck Nason",
-  "license": "ISC"
+  }
 }

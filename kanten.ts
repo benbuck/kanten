@@ -107,7 +107,7 @@ class Thingy {
 			}
 		}
 	}
-	
+
 	die(): void {
 		this.sprite.body.mass = 0;
 		this.massChanged();
@@ -143,22 +143,25 @@ class Thingy {
 };
 
 class RunState extends Phaser.State {
+	init(): void {
+		game.scale.scaleMode = Phaser.ScaleManager.RESIZE;
+		game.scale.pageAlignHorizontally = true;
+		game.scale.pageAlignVertically = true;
+
+		game.physics.startSystem(Phaser.Physics.ARCADE);
+		game.thingsGroup = game.add.group();
+	}
+
 	preload(): void {
 		this.load.image('bluesphere', 'art/bluesphere.png');
 		this.load.image('redsphere', 'art/redsphere.png');
 	}
 
 	create(): void {
-		const maxNumThings: number = 100;
-
-		game.scale.scaleMode = Phaser.ScaleManager.RESIZE;
-		game.physics.startSystem(Phaser.Physics.ARCADE);
-		game.thingsGroup = game.add.group();
-
 		let aiController: AIController = new AIController(this.game.rnd);
 		let cursorController: CursorController = new CursorController(this.game.input.keyboard.createCursorKeys());
 
-		while (this.things.length < maxNumThings) {
+		while (this.things.length < RunState.maxNumThings) {
 			let isPlayer: boolean = (this.things.length == 0);
 			let imageString: string = isPlayer ? 'bluesphere' : 'redsphere';
 			let mass: number = isPlayer ? 3.0 : game.rnd.realInRange(0.75, 1.25);
@@ -195,11 +198,12 @@ class RunState extends Phaser.State {
 		}
 	}
 
+	protected static readonly maxNumThings: number = 1000;
 	protected things: Thingy[] = [];
 };
 
 class Game extends Phaser.Game {
-    constructor() {
+	constructor() {
 		super("95%", "95%", Phaser.AUTO, 'game');
 
 		this.state.add('RunState', RunState, false);
